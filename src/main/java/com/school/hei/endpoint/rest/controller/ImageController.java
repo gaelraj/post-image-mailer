@@ -8,6 +8,7 @@ import com.school.hei.file.bucket.BucketComponent;
 import com.school.hei.model.Image;
 import com.school.hei.repository.ImageRepository;
 import com.school.hei.validator.ImageFormatValidator;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -73,5 +74,23 @@ public class ImageController {
             .build();
 
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
+  }
+
+  private ImageResponse toResponseDto(com.school.hei.model.Image image) {
+    boolean isReady = image.getBwS3Key() != null;
+
+    String downloadUrl =
+        isReady
+            ? bucketComponent.presign(image.getBwS3Key(), Duration.ofMinutes(10)).toString()
+            : null;
+
+    return ImageResponse.builder()
+        .id(image.getId())
+        .fileName(image.getFileName())
+        .email(image.getEmail())
+        .createdAt(image.getCreatedAt())
+        .downloadUrl(downloadUrl)
+        .status(isReady ? "READY" : "PROCESSING")
+        .build();
   }
 }

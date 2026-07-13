@@ -1,0 +1,113 @@
+openapi: 3.0.3
+info:
+  title: post-image-mailer API
+  description: >
+    API for submitting an image (JPEG or PNG), storing it, automatically
+    generating a black-and-white version in the background, and sending
+    a confirmation email containing the download link.
+  version: 1.0.0
+
+servers:
+  - description: Preprod
+    url: https://ajqzqghibiacfobvdaetziyu3e0uufmg.lambda-url.eu-west-3.on.aws
+
+paths:
+  /images:
+    post:
+      summary: Submit an image
+      description: >
+        Receives an image (JPEG or PNG only), saves it to the database,
+        and triggers, in the background, the black-and-white conversion
+        as well as a confirmation email.
+      operationId: submitImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - email
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file, JPEG or PNG only
+                email:
+                  type: string
+                  format: email
+                  description: Email address of the confirmation recipient
+      responses:
+        "201":
+          description: Image successfully received and saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageResponse"
+        "400":
+          description: Unsupported file format or invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    get:
+      summary: List all submitted images
+      description: >
+        Returns the list of all recorded images, with a download link
+        regenerated on the fly if the background processing (black-and-white
+        conversion) has already completed.
+      operationId: findAllImages
+      responses:
+        "200":
+          description: List of images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ImageResponse"
+
+components:
+  schemas:
+    ImageResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        fileName:
+          type: string
+          example: "sample.jpeg"
+        email:
+          type: string
+          format: email
+          example: "hei.gael.30@gmail.com"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-07-13T09:28:29Z"
+        downloadUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: >
+            Presigned S3 link to the black-and-white version of the image.
+            Null until the background processing has completed.
+          example: "https://my-bucket.s3.eu-west-3.amazonaws.com/images/bw/3fa85f64...?X-Amz-..."
+        status:
+          type: string
+          enum: [PROCESSING, READY]
+          description: >
+            PROCESSING if the black-and-white conversion is not yet
+            complete, READY otherwise.
+          example: "READY"
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Unsupported file format. Only JPEG and PNG are allowed."
