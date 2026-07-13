@@ -20,7 +20,6 @@ public class LambdaHandler implements RequestStreamHandler {
   static {
     try {
       handler = SpringBootLambdaContainerHandler.getHttpApiV2ProxyHandler(PojaApplication.class);
-      handler.getContainerConfig().addBinaryContentTypes("multipart/form-data");
     } catch (ContainerInitializationException e) {
       throw new RuntimeException("Initialization of Spring Boot Application failed", e);
     }
